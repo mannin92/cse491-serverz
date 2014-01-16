@@ -22,7 +22,8 @@ while True:
     
     # alternative way
     # s.send('%s %s %s' % (response_proto, response_status, response_status_text))
-
+    # Need 1 space in front of pound -MattyAyOh
+    
     # header details
     c.send('Content-Type: text/html\r\n\r\n')
 
