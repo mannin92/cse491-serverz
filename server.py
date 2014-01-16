@@ -35,6 +35,9 @@ while True:
 	response_headers_raw = ''.join('%s: %s \r\n' % (k, v) for k, v in response_headers.iteritems())
 	
 	c.send('HTTP/1.1 200 OK \r\n')
+        # @comment: Runs fine in chrome, the commented out code should either be accompanied by a 
+        # comment explaning the purpose or removed 
+
 #	c.send('Content-Type: text/html; encoding=utf8 \r\n')
 #	c.send('Content-Length: %d\r\n' % (len(response_body_raw)))
 #	c.send('Connection: close\r\n')
