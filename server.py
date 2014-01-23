@@ -20,10 +20,11 @@ while True:
     print 'Got connection from', client_host, client_port
     c.send('HTTP/1.0 200 OK\r\n') 
     
-    #alternative way 
+    # alternative way
     # s.send('%s %s %s' % (response_proto, response_status, response_status_text))
-
-    #header details
+    # Need 1 space in front of pound -MattyAyOh
+    
+    # header details
     c.send('Content-Type: text/html\r\n\r\n')
 
     response_body = "<h1>Hello, world!</h1> This is mannin92's web server\r\n"
