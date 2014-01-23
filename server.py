@@ -50,6 +50,5 @@ def handle_connection(conn):
     conn.send(response_body);
     conn.close();
 
-
 if __name__ == '__main__':
     main();
