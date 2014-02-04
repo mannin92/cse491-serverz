@@ -34,7 +34,9 @@ def test_handle_connection():
                       '<h1>Link to the past</h1>'+ \
                       '<a href = /content>Content</a><br>' + \
                       '<a href = /file>File</a><br>' + \
-                      '<a href = /image>Image</a>'
+                      '<a href = /image>Image</a><br>' + \
+                      '<a href = /getform>GET Form</a><br>' +\
+                      '<a href = /postform>POST Form</a>'
 
     server.handle_connection(conn)
 
