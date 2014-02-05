@@ -26,80 +26,122 @@ def main():
 def handle_connection(conn):
     
     #Get the request message and parse
-    fullrequest = conn.recv(1000)
-    request=fullrequest.split('\n')[0];
-    method = request.split(' ')[0];
-    dirtyPath = request.split(' ')[1];
-    parse = urlparse.urlparse(dirtyPath);
-    path=parse[2];
 
-    #Send a response
-    conn.send('HTTP/1.0 200 OK\r\n');
-    conn.send('Content-type: text/html\r\n\r\n');
-    response_body='';
+    #need to change thissssss
+    fullrequest = conn.recv(1000)
+    request=fullrequest.split('\n')[0].split(' ');
+
+    method = request[0];
+    dirtyPath = request[1];
+
+    try:
+        parse = urlparse.urlparse(dirtyPath);
+        path=parse[2];
+
+    except:
+       path = "/404"
+       four_oh_four_connection(conn, ' ');
+
     if method == 'POST':
         if path == '/submit':
+            #parameters are at end of request, get last item
+            #in this case, param is user name
             submit_connection(conn, fullrequest.split('\r\n')[-1]);
+        else:
+            four_oh_four_connection(conn, ' ');
     elif method =='GET':
         if path == '/':
-            response_body = '<h1>Link to the past</h1>'+ \
-                          '<a href = /content>Content</a><br>' + \
-                          '<a href = /file>File</a><br>' + \
-                          '<a href = /image>Image</a><br>' + \
-                          '<a href = /getform>GET Form</a><br>' +\
-                          '<a href = /postform>POST Form</a>'
-            index_connection(conn, response_body);
+            index_connection(conn, ' ');
         elif path == '/content':
-            response_body = '<h1>Khan-tent</h1>Khaannnnnnnnnnn';
-            content_connection(conn, response_body);
+            content_connection(conn, ' ');
         elif path == '/file':
-            response_body = '<h1>Let\'s go a-filing</h1> :D';
-            file_connection(conn, response_body);
+            file_connection(conn, ' ');
         elif path == '/image':
-            response_body = '<h1>Gif</h1>Insert cute animal';
-            image_connection(conn, response_body);
+            image_connection(conn, ' ');
         elif path =='/getform':
-            response_body = "<form action='/submit' method='GET'>\n" + \
-                "First name: <input type='text' name='firstname'><br> " + \
-                "Last name: <input type='text' name='lastname'>" + \
-                "<p><input type='submit' value='Submit'>\n\n" + \
-                "</form>"
-            form_connection(conn, response_body);    
+            form_get_connection(conn, ' ');    
         elif path =='/postform':
-            response_body = "<form action='/submit' method='POST'>\n" + \
-                "First name: <input type='text' name='firstname'><br> " + \
-                "Last name: <input type='text' name='lastname'>" + \
-                "<p><input type='submit' value='Submit'>\n\n" + \
-                "</form>"
-            form_connection(conn, response_body);    
+            form_post_connection(conn, ' ');  
         elif path == '/submit':
+            #in the case of get, the param are in the url
             submit_connection(conn, parse[4]);
+        else:
+           four_oh_four_connection(conn, ' ');
 		
     conn.close();
     
-#this counts as refactoring rightttttt?
-def index_connection(conn, input):
-	conn.send(input);
-	
-def content_connection(conn, input):
-	conn.send(input);
-	
-def file_connection(conn, input):
-	conn.send(input);
-	
-def image_connection(conn, input):
-	conn.send(input);
-    
-def form_connection(conn, input):
-	conn.send(input);
+#just to be used when not 404, kinda redundant.
+def good_connection(conn):
+    #Send a response
+    conn.send('HTTP/1.0 200 OK\r\n');
+    conn.send('Content-type: text/html\r\n\r\n');
 
-def submit_connection(conn, input):
 
-#stole this from Cam.
-    params = input.split("&")
+#param is currently a blank parameter to be added later
+def index_connection(conn, param):
+    response_body = '<h1>Link to the past</h1>'+ \
+                    '<a href = /content>Content</a><br>' + \
+                    '<a href = /file>File</a><br>' + \
+                    '<a href = /image>Image</a><br>' + \
+                    '<a href = /getform>GET Form</a><br>' +\
+                    '<a href = /postform>POST Form</a>'
+    good_connection(conn);
+    conn.send(response_body);
+	
+def content_connection(conn, param):
+    response_body = '<h1>Khan-tent</h1>Khaannnnnnnnnnn';
+    good_connection(conn);
+    conn.send(response_body);
+	
+def file_connection(conn, param):
+    response_body = '<h1>Let\'s go a-filing</h1> :D';
+    good_connection(conn);
+    conn.send(response_body);
+	
+def image_connection(conn, param):
+    response_body = '<h1>Gif</h1>Insert cute animal';
+    good_connection(conn);
+    conn.send(response_body);
     
-    firstname = params[0].split("=")[1];
-    lastname = params[1].split("=")[1];
+def form_post_connection(conn, param):
+    response_body = "<form action='/submit' method='POST'>\n" + \
+                "First name: <input type='text' name='firstname'><br> " + \
+                "Last name: <input type='text' name='lastname'>" + \
+                "<p><input type='submit' value='Submit'>\n\n" + \
+                "</form>"
+    good_connection(conn);
+    conn.send(response_body);
+
+def form_get_connection(conn, param):
+    response_body = "<form action='/submit' method='GET'>\n" + \
+                "First name: <input type='text' name='firstname'><br> " + \
+                "Last name: <input type='text' name='lastname'>" + \
+                "<p><input type='submit' value='Submit'>\n\n" + \
+                "</form>"
+    good_connection(conn);
+    conn.send(response_body);
+
+#def unknown_connection(conn, param):
+#    response_body = '<h1>???</h1>How did we get here?';
+#    conn.send(response_body);
+
+def four_oh_four_connection(conn, param):
+    conn.send('HTTP/1.0 404 Not Found\r\n');
+    conn.send('Content-type: text/html\r\n\r\n');
+    response_body = '<h1>NOT FOUND</h1>I\'m sorry, but the page you' +\
+                    ' have inputted in temporarily not in service. ' +\
+                    ' Please try again later.';
+    conn.send(response_body);
+
+#submit path is handled, should be called when form submitted
+def submit_connection(conn, param):
+
+    #magggiiicc
+    param = urlparse.parse_qs(param)
+    
+    # pull out the info we want
+    firstname = param['firstname'][0]
+    lastname  = param['lastname'][0]
 
     conn.send('HTTP/1.0 200 OK\r\n' + \
               'Content-type: text/html\r\n' + \
