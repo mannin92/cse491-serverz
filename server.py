@@ -59,9 +59,9 @@ def handle_connection(conn):
         elif path == '/image':
             image_connection(conn, ' ');
         elif path =='/getform':
-            form_get_connection(conn, ' ');    
+            get_form_connection(conn, ' ');    
         elif path =='/postform':
-            form_post_connection(conn, ' ');  
+            post_form_connection(conn, ' ');  
         elif path == '/submit':
             #in the case of get, the param are in the url
             submit_connection(conn, parse[4]);
@@ -103,7 +103,7 @@ def image_connection(conn, param):
     good_connection(conn);
     conn.send(response_body);
     
-def form_post_connection(conn, param):
+def post_form_connection(conn, param):
     response_body = "<form action='/submit' method='POST'>\n" + \
                 "First name: <input type='text' name='firstname'><br> " + \
                 "Last name: <input type='text' name='lastname'>" + \
@@ -112,7 +112,7 @@ def form_post_connection(conn, param):
     good_connection(conn);
     conn.send(response_body);
 
-def form_get_connection(conn, param):
+def get_form_connection(conn, param):
     response_body = "<form action='/submit' method='GET'>\n" + \
                 "First name: <input type='text' name='firstname'><br> " + \
                 "Last name: <input type='text' name='lastname'>" + \

@@ -78,13 +78,90 @@ def test_handle_image_connection():
 
     assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
 
-# Test a post call
-def test_handle_post_connection():
-    conn = FakeConnection("POST / HTTP/1.0\r\n\r\n")
+# Test a post form
+def test_handle_post_form_connection():
+    conn = FakeConnection("GET /postform HTTP/1.0\r\n\r\n")
+    expected_return = 'HTTP/1.0 200 OK\r\n' + \
+                      'Content-type: text/html\r\n\r\n' +\
+                      "<form action='/submit' method='POST'>\n" +\
+                      "First name: <input type='text' name='" +\
+                      "firstname'><br> " +\
+                      "Last name: <input type='text' name='lastname'>" +\
+                      "<p><input type='submit' value='Submit'>\n\n" +\
+                      "</form>"
+
+    server.handle_connection(conn)
+
+    assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
+
+# Test a get form
+def test_handle_get_form_connection():
+    conn = FakeConnection("GET /getform HTTP/1.0\r\n\r\n")
+    expected_return = 'HTTP/1.0 200 OK\r\n' + \
+                      'Content-type: text/html\r\n\r\n' +\
+                      "<form action='/submit' method='GET'>\n" +\
+                      "First name: <input type='text' name='" +\
+                      "firstname'><br> " +\
+                      "Last name: <input type='text' name='lastname'>" +\
+                      "<p><input type='submit' value='Submit'>\n\n" +\
+                      "</form>"
+
+    server.handle_connection(conn)
+
+    assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
+
+# Test a 404 call
+def test_handle_four_oh_four_connection():
+    conn = FakeConnection("GET /ghfghf HTTP/1.0\r\n\r\n")
+    expected_return = 'HTTP/1.0 404 Not Found\r\n' +\
+                      'Content-type: text/html\r\n\r\n' +\
+                      '<h1>NOT FOUND</h1>I\'m sorry, but the page you' +\
+                      ' have inputted in temporarily not in service. ' +\
+                      ' Please try again later.';
+
+    server.handle_connection(conn)
+
+    assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
+
+# Test a (post) 404 call
+def test_handle_four_oh_four_connection():
+    conn = FakeConnection("POST /ghfghf HTTP/1.0\r\n\r\n")
+    expected_return = 'HTTP/1.0 404 Not Found\r\n' +\
+                      'Content-type: text/html\r\n\r\n' +\
+                      '<h1>NOT FOUND</h1>I\'m sorry, but the page you' +\
+                      ' have inputted in temporarily not in service. ' +\
+                      ' Please try again later.';
+
+    server.handle_connection(conn)
+
+    assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
+
+# Test path = /submit
+def test_handle_get_submit():
+    conn = FakeConnection("GET /submit?firstname=F&" +\
+                          "lastname=Darcy HTTP/1.0" + \
+                          "HTTP/1.1\r\n\r\n")
+
     expected_return = 'HTTP/1.0 200 OK\r\n' + \
                       'Content-type: text/html\r\n' + \
                       '\r\n' + \
-                      '<h1>GHOST!</h1>Oops, meant \"Post!\"'
+                      "Hello Mr. F Darcy."
+
+    server.handle_connection(conn)
+
+    assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
+
+
+
+# Test path = /submit
+def test_handle_post_submit():
+    conn = FakeConnection("POST /submit " + \
+                          "HTTP/1.1\r\n\r\nfirstname=F&lastname=Darcy")
+
+    expected_return = 'HTTP/1.0 200 OK\r\n' + \
+                      'Content-type: text/html\r\n' + \
+                      '\r\n' + \
+                      "Hello Mr. F Darcy."
 
     server.handle_connection(conn)
 
