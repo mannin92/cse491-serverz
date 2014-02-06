@@ -72,7 +72,7 @@ def test_handle_image_connection():
     expected_return = 'HTTP/1.0 200 OK\r\n' + \
                       'Content-type: text/html\r\n' + \
                       '\r\n' + \
-                      '<h1>Gif</h1>Insert cute animal'
+                      '<h1>Image Page</h1>Insert cute animal'
 
     server.handle_connection(conn)
 
