@@ -25,12 +25,18 @@ class FakeConnection(object):
     def close(self):
         self.is_closed = True
 
+<<<<<<< HEAD
 # Test a / call!
+=======
+# Test a basic GET call.
+
+>>>>>>> e77f2fc738ef6ccc259923fb42d8deae606df1c3
 def test_handle_connection():
     conn = FakeConnection("GET / HTTP/1.0\r\n\r\n")
     expected_return = 'HTTP/1.0 200 OK\r\n' + \
                       'Content-type: text/html\r\n' + \
                       '\r\n' + \
+<<<<<<< HEAD
                       '<h1>Link to the past</h1>'+ \
                       '<a href = /content>Content</a><br>' + \
                       '<a href = /file>File</a><br>' + \
@@ -146,10 +152,15 @@ def test_handle_get_submit():
                       'Content-type: text/html\r\n' + \
                       '\r\n' + \
                       "Hello Mr. F Darcy."
+=======
+                      '<h1>Hello, world.</h1>' + \
+                      'This is ctb\'s Web server.'
+>>>>>>> e77f2fc738ef6ccc259923fb42d8deae606df1c3
 
     server.handle_connection(conn)
 
     assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
+<<<<<<< HEAD
 
 
 
@@ -167,3 +178,5 @@ def test_handle_post_submit():
 
     assert conn.sent == expected_return, 'Got: %s' % (repr(conn.sent),)
 
+=======
+>>>>>>> e77f2fc738ef6ccc259923fb42d8deae606df1c3

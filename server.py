@@ -3,8 +3,8 @@ import random
 import socket
 import time
 import urlparse
+import cgi
 
-import cgi from StringIO
 import StringIO
 import jinja2
 
