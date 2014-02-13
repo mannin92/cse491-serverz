@@ -5,8 +5,8 @@ import time
 import urlparse
 import cgi
 
-import StringIO
-import jinja2
+from StringIO import StringIO
+from app import make_app
 
 def main():
 
@@ -28,190 +28,64 @@ def main():
         handle_connection(c);
 
 def handle_connection(conn):
-#FIX THIS ASAP
-    # Start reading in data from the connection
-    req = conn.recv(1)
-    count = 0
-    while req[-4:] != '\r\n\r\n':
-        req += conn.recv(1)
+  environ = {}
+  request = conn.recv(1)
+  
+  # This will get all the headers
+  while request[-4:] != '\r\n\r\n':
+    request += conn.recv(1)
 
-    # Parse the headers we've received
-    req, data = req.split('\r\n',1)
-    headers = {}
-    for line in data.split('\r\n')[:-2]:
-        k, v = line.split(': ', 1)
-        headers[k.lower()] = v
+  first_line_of_request_split = request.split('\r\n')[0].split(' ')
 
-    # Parse out the path and related info
-    path = urlparse(req.split(' ', 3)[1])
+  # Path is the second element in the first line of the request
+  # separated by whitespace. (Between GET and HTTP/1.1). GET/POST is first.
+  http_method = first_line_of_request_split[0]
+  environ['REQUEST_METHOD'] = first_line_of_request_split[0]
 
-    # The dict of pages we know how to get to
-    response = {
-            '/' : 'index.html', \
-            '/content' : 'content.html', \
-            '/file' : 'file.html', \
-            '/image' : 'image.html', \
-            '/form' : 'form.html', \
-            '/submit' : 'submit.html', \
-               }
-    
-    # Basic connection information and set up templates
-    loader = jinja2.FileSystemLoader('./templates')
-    env = jinja2.Environment(loader=loader)
-    retval = 'HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n'
-    content = ''
-    
-    # Check if the request is get or post, set up the args
-    args = parse_qs(path[4])
-    if req.startswith('POST '):
-        while len(content) < int(headers['content-length']):
-            content += conn.recv(1)
-            
-    fs = cgi.FieldStorage(fp=StringIO(content), headers=headers, environ={'REQUEST_METHOD' : 'POST'})
-    args.update(dict([(x, [fs[x].value]) for x in fs.keys()]))
+  try:
+    parsed_url = urlparse.urlparse(first_line_of_request_split[1])
+    environ['PATH_INFO'] = parsed_url[2]
+  except:
+    pass
 
-    # Check if we got a path to an existing page
-    try:
-        template = env.get_template(response[path[2]])
-    except KeyError:
-        args['path'] = path[2]
-        retval = 'HTTP/1.0 404 Not Found\r\n\r\n'
-        template = env.get_template('404.html')
-        
-    # Render the page
-    retval += template.render(args)
-    conn.send(retval)
-    
-    # Done here
-    conn.close()
+  def start_response(status, response_headers):
+        conn.send('HTTP/1.0 ')
+        conn.send(status)
+        conn.send('\r\n')
+        for pair in response_headers:
+            key, header = pair
+            conn.send(key + ': ' + header + '\r\n')
+        conn.send('\r\n')
 
+  if environ['REQUEST_METHOD'] == 'POST':
+    environ = parse_post_request(conn, request, environ)
+  elif environ['REQUEST_METHOD'] == 'GET':
+    environ['QUERY_STRING'] = parsed_url.query
+  wsgi_app = make_app()
+  conn.send(wsgi_app(environ, start_response))
+  conn.close()
 
+def parse_post_request(conn, request, environ):
+  request_split = request.split('\r\n')
 
+  # Headers are separated from the content by '\r\n'
+  # which, after the split, is just ''.
 
-    """
-    #Get the request message and parse
+  # First line isn't a header, but everything else
+  # up to the empty line is. The names are separated
+  # from the values by ': '
+  for i in range(1,len(request_split) - 2):
+      header = request_split[i].split(': ', 1)
+      environ[header[0].upper()] = header[1]
 
-    #need to change thissssss
-    fullrequest = conn.recv(1000)
-    request=fullrequest.split('\n')[0].split(' ');
+  content_length = int(environ['CONTENT-LENGTH'])
+  
+  content = ''
+  for i in range(0,content_length):
+      content += conn.recv(1)
 
-    method = request[0];
-    dirtyPath = request[1];
+  environ['wsgi.input'] = StringIO(content)
+  return environ
 
-    try:
-        parse = urlparse.urlparse(dirtyPath);
-        path=parse[2];
-
-    except:
-       path = "/404"
-       four_oh_four_connection(conn, ' ');
-
-    if method == 'POST':
-        if path == '/submit':
-            #parameters are at end of request, get last item
-            #in this case, param is user name
-            submit_connection(conn, fullrequest.split('\r\n')[-1]);
-        else:
-            four_oh_four_connection(conn, ' ');
-    elif method =='GET':
-        if path == '/':
-            index_connection(conn, ' ');
-        elif path == '/content':
-            content_connection(conn, ' ');
-        elif path == '/file':
-            file_connection(conn, ' ');
-        elif path == '/image':
-            image_connection(conn, ' ');
-        elif path =='/getform':
-            get_form_connection(conn, ' ');    
-        elif path =='/postform':
-            post_form_connection(conn, ' ');  
-        elif path == '/submit':
-            #in the case of get, the param are in the url
-            submit_connection(conn, parse[4]);
-        else:
-           four_oh_four_connection(conn, ' ');
-		
-    conn.close();
-    
-#just to be used when not 404, kinda redundant.
-def good_connection(conn):
-    #Send a response
-    conn.send('HTTP/1.0 200 OK\r\n');
-    conn.send('Content-type: text/html\r\n\r\n');
-
-
-#param is currently a blank parameter to be added later
-def index_connection(conn, param):
-    response_body = '<h1>Link to the past</h1>'+ \
-                    '<a href = /content>Content</a><br>' + \
-                    '<a href = /file>File</a><br>' + \
-                    '<a href = /image>Image</a><br>' + \
-                    '<a href = /getform>GET Form</a><br>' +\
-                    '<a href = /postform>POST Form</a>'
-    good_connection(conn);
-    conn.send(response_body);
-	
-def content_connection(conn, param):
-    response_body = '<h1>Khan-tent</h1>Khaannnnnnnnnnn';
-    good_connection(conn);
-    conn.send(response_body);
-	
-def file_connection(conn, param):
-    response_body = '<h1>Let\'s go a-filing</h1> :D';
-    good_connection(conn);
-    conn.send(response_body);
-	
-def image_connection(conn, param):
-    response_body = '<h1>Gif</h1>Insert cute animal';
-    good_connection(conn);
-    conn.send(response_body);
-    
-def post_form_connection(conn, param):
-    response_body = "<form action='/submit' method='POST'>\n" + \
-                "First name: <input type='text' name='firstname'><br> " + \
-                "Last name: <input type='text' name='lastname'>" + \
-                "<p><input type='submit' value='Submit'>\n\n" + \
-                "</form>"
-    good_connection(conn);
-    conn.send(response_body);
-
-def get_form_connection(conn, param):
-    response_body = "<form action='/submit' method='GET'>\n" + \
-                "First name: <input type='text' name='firstname'><br> " + \
-                "Last name: <input type='text' name='lastname'>" + \
-                "<p><input type='submit' value='Submit'>\n\n" + \
-                "</form>"
-    good_connection(conn);
-    conn.send(response_body);
-
-#def unknown_connection(conn, param):
-#    response_body = '<h1>???</h1>How did we get here?';
-#    conn.send(response_body);
-
-def four_oh_four_connection(conn, param):
-    conn.send('HTTP/1.0 404 Not Found\r\n');
-    conn.send('Content-type: text/html\r\n\r\n');
-    response_body = '<h1>NOT FOUND</h1>I\'m sorry, but the page you' +\
-                    ' have inputted in temporarily not in service. ' +\
-                    ' Please try again later.';
-    conn.send(response_body);
-
-#submit path is handled, should be called when form submitted
-def submit_connection(conn, param):
-
-    #magggiiicc
-    param = urlparse.parse_qs(param)
-    
-    # pull out the info we want
-    firstname = param['firstname'][0]
-    lastname  = param['lastname'][0]
-
-    conn.send('HTTP/1.0 200 OK\r\n' + \
-              'Content-type: text/html\r\n' + \
-              '\r\n' + \
-              "Hello Mr. %s %s." % (firstname, lastname))
-    
-    """
 if __name__ == '__main__':
     main();
