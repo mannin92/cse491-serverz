@@ -7,10 +7,14 @@ import cgi
 
 from StringIO import StringIO
 from app import make_app
+from sys import stderr
+from wsgiref.validate import validator
 
-def main():
-
-    s = socket.socket();         # Create a socket object
+def main(socketmodule=None):
+    if socketmodule is None:
+        socketmodule = socket
+    
+    s = socket.socket();  # Create a socket object
     host = socket.getfqdn(); # Get local machine name
     port = random.randint(8000, 9999);
     s.bind((host, port));        # Bind to the port
@@ -18,37 +22,59 @@ def main():
     print 'Starting server on', host, port;
     print 'The Web server URL for this would be http://%s:%d/' % (host, port);
     
-    s.listen(5);                 # Now wait for client connection.
+    s.listen(5);  # Now wait for client connection.
     
     print 'Entering infinite loop; hit CTRL-C to exit'
     while True:
         # Establish connection with client.    
         c, (client_host, client_port) = s.accept();
         print 'Got connection from', client_host, client_port;
-        handle_connection(c);
+        handle_connection(c, client_port);
 
-def handle_connection(conn):
-  environ = {}
-  request = conn.recv(1)
+def handle_connection(conn, port):
+    environ = {}
+    request = conn.recv(1)
   
-  # This will get all the headers
-  while request[-4:] != '\r\n\r\n':
-    request += conn.recv(1)
+    if not request:
+        print 'Error, client closed'
+        return
+    
+    # This will get all the headers
+    while request[-4:] != '\r\n\r\n':
+        request += conn.recv(1)
 
-  first_line_of_request_split = request.split('\r\n')[0].split(' ')
+    request, data = request.split('\r\n',1)
+    headers = {}
+    for line in data.split('\r\n')[:-2]:
+        k, v = line.split(': ', 1)
+        headers[k.lower()] = v
 
-  # Path is the second element in the first line of the request
-  # separated by whitespace. (Between GET and HTTP/1.1). GET/POST is first.
-  http_method = first_line_of_request_split[0]
-  environ['REQUEST_METHOD'] = first_line_of_request_split[0]
+    path = urlparse(request.split(' ', 3)[1])
+    
+    environ['REQUEST_METHOD'] = 'GET'
+    environ['PATH_INFO'] = path[2]
+    environ['QUERY_STRING'] = path[4]
+    environ['CONTENT_TYPE'] = 'text/html'
+    environ['CONTENT_LENGTH'] = str(0)
+    environ['SCRIPT_NAME'] = ''
+    environ['SERVER_NAME'] = socket.getfqdn()
+    environ['SERVER_PORT'] = str(port)
+    environ['wsgi.version'] = (1, 0)
+    environ['wsgi.errors'] = stderr
+    environ['wsgi.multithread']  = False
+    environ['wsgi.multiprocess'] = False
+    environ['wsgi.run_once']     = False
+    environ['wsgi.url_scheme'] = 'http'
 
-  try:
-    parsed_url = urlparse.urlparse(first_line_of_request_split[1])
-    environ['PATH_INFO'] = parsed_url[2]
-  except:
-    pass
+    body = ''
+    if request.startswith('POST '):
+        environ['REQUEST_METHOD'] = 'POST'
+        environ['CONTENT_LENGTH'] = headers['content-length']
+        environ['CONTENT_TYPE'] = headers['content-type']
+        while len(body) < int(headers['content-length']):
+            body += conn.recv(1)
 
-  def start_response(status, response_headers):
+    def start_response(status, response_headers):  
         conn.send('HTTP/1.0 ')
         conn.send(status)
         conn.send('\r\n')
@@ -56,36 +82,17 @@ def handle_connection(conn):
             key, header = pair
             conn.send(key + ': ' + header + '\r\n')
         conn.send('\r\n')
-
-  if environ['REQUEST_METHOD'] == 'POST':
-    environ = parse_post_request(conn, request, environ)
-  elif environ['REQUEST_METHOD'] == 'GET':
-    environ['QUERY_STRING'] = parsed_url.query
-  wsgi_app = make_app()
-  conn.send(wsgi_app(environ, start_response))
-  conn.close()
-
-def parse_post_request(conn, request, environ):
-  request_split = request.split('\r\n')
-
-  # Headers are separated from the content by '\r\n'
-  # which, after the split, is just ''.
-
-  # First line isn't a header, but everything else
-  # up to the empty line is. The names are separated
-  # from the values by ': '
-  for i in range(1,len(request_split) - 2):
-      header = request_split[i].split(': ', 1)
-      environ[header[0].upper()] = header[1]
-
-  content_length = int(environ['CONTENT-LENGTH'])
+		
+		
+    environ['wsgi.input'] = StringIO(body)
+    my_app = make_app()
+    validator_app = validator(my_app)
+    result = my_app(environ, start_response)
+    for data in result:
+        conn.send(data)
+    conn.close()
+		
   
-  content = ''
-  for i in range(0,content_length):
-      content += conn.recv(1)
-
-  environ['wsgi.input'] = StringIO(content)
-  return environ
-
+  
 if __name__ == '__main__':
     main();
