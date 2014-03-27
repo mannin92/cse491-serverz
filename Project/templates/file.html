@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<title>File Page</title>
+File away.
+{% for name in names %}
+	<a href='/text/{{ name }}'>{{ name }}<br>
+{% endfor %}
+	<a href="/">Home</a>
+{% endblock %}

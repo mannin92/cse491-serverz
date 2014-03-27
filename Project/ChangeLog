@@ -1,0 +1,18 @@
+2014-01-07  Titus Brown  <t@Titus-MacBook-Air-2.local>
+
+ * Initialized repository, created server.py and README.
+
+2014-01-15  Jenny  <mannin92@arctic.cse.msu.edu>
+
+ * Deleted previous c.send lines and replaced with HTTP response msg
+
+2014-01-23  Jenny  <mannin92@arctic.cse.msu.edu>
+
+ * Added Test file from ctb cse491 github hw2
+ * Broke code into functions, and then expanded functions
+ * Handles POST and GET requests
+ * Test functions for each case
+
+ 2014-02-12 Jenny  <mannin92@arctic.cse.msu.edu>
+ *Templates
+ *Fixed previous problems.
