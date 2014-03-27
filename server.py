@@ -16,9 +16,47 @@ def main(socketmodule=None):
     
     s = socket.socket();  # Create a socket object
     host = socket.getfqdn(); # Get local machine name
-    port = random.randint(8000, 9999);
-    s.bind((host, port));        # Bind to the port
-    
+
+    argParser = argparse.ArgumentParser(description='Set up WSGI server')
+    argParser.add_argument('-A', metavar='App', type=str,
+                            default=['myapp'],
+                            choices=['myapp', 'imageapp', 'altdemo'],
+                            help='Select which app to run', dest='app')
+    argParser.add_argument('-p', metavar='Port', type=int,
+                            default=-1, help='Select a port to run on',
+                            dest='p')
+    argVals = argParser.parse_args()
+
+    app = argVals.app
+    if app == 'altdemo': 
+        ## Quixote altdemo
+        import quixote
+        from quixote.demo.altdemo import create_publisher
+        p = create_publisher()
+        wsgi_app = quixote.get_wsgi_app()
+        ##
+
+    elif app == 'imageapp':
+        ## Image app
+        import quixote
+        import imageapp
+        from imageapp import create_publisher
+        p = create_publisher()
+        imageapp.setup()
+        wsgi_app = quixote.get_wsgi_app()
+        ##
+
+    else:
+        ## My app.py
+        from app import make_app
+        wsgi_app = make_app()
+        ## 
+
+    # Bind to a (random) port
+    port = argVals.p if argVals.p != -1 else random.randint(8000,9999)
+    s.bind((host, port))
+
+
     print 'Starting server on', host, port;
     print 'The Web server URL for this would be http://%s:%d/' % (host, port);
     
@@ -30,6 +68,7 @@ def main(socketmodule=None):
         c, (client_host, client_port) = s.accept();
         print 'Got connection from', client_host, client_port;
         handle_connection(c, client_port);
+
 
 def handle_connection(conn, port):
     environ = {}
@@ -65,6 +104,7 @@ def handle_connection(conn, port):
     environ['wsgi.multiprocess'] = False
     environ['wsgi.run_once']     = False
     environ['wsgi.url_scheme'] = 'http'
+    environ['HTTP_COOKIE'] = headers['cookie'] if 'cookie' in headers.keys() else ''
 
     body = ''
     if request.startswith('POST '):
