@@ -1,11 +1,14 @@
-# from http://docs.python.org/2/library/wsgiref.html
-import cgi
-import urlparse
-import jinja2
-from wsgiref.util import setup_testing_defaults
+#! /usr/bin/env python
 
-# A relatively simple WSGI application. It's going to print out the
-# environment dictionary after being updated by setup_testing_defaults
+import cgi
+import jinja2
+import os
+import traceback
+import urllib
+from StringIO import StringIO
+from urlparse import urlparse, parse_qs
+from wsgiref.simple_server import make_server
+
 def simple_app(environ, start_response):
     loader = jinja2.FileSystemLoader('./templates')
     env = jinja2.Environment(loader=loader)

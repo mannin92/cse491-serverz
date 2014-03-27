@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 import server
 
 class FakeConnection(object):
@@ -9,6 +10,7 @@ class FakeConnection(object):
         self.to_recv = to_recv
         self.sent = ""
         self.is_closed = False
+		self.n_times_accept_called = 0
 
     def recv(self, n):
         if n > len(self.to_recv):
@@ -25,12 +27,31 @@ class FakeConnection(object):
     def close(self):
         self.is_closed = True
 
+    def bind(self, param):
+        (host, port) = param
+
+    def listen(self, n):
+        assert n ==5
+        if n !=5
+            raise Exception("wrong n")
+
+class FakeSocketModule(object):    
+    def getfqdn(self):        
+        return "fakehost"    
+
+    def socket(self):        
+        return FakeConnection("")
+		
+class AcceptCalledMultipleTimes(Exception):
+    pass	
+	
+	
 
 # Test a basic GET call.
 def test_handle_connection():
     conn = FakeConnection("GET / HTTP/1.0\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
 
     assert 'HTTP/1.0 200' in conn.sent and 'form' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -39,7 +60,8 @@ def test_handle_connection():
 def test_handle_connection_content():
     conn = FakeConnection("GET /content HTTP/1.0\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
+	result = conn.sent
 
     assert 'HTTP/1.0 200' in conn.sent and 'content' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -48,7 +70,7 @@ def test_handle_connection_content():
 def test_handle_connection_file():
     conn = FakeConnection("GET /file HTTP/1.0\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
 
     assert 'HTTP/1.0 200' in conn.sent and 'File' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -62,7 +84,7 @@ def test_handle_connection_image():
                       '<h1>All kinds of content</h1>' + \
                       'Khannnn.'
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     print conn.sent
     assert 'HTTP/1.0 200' in conn.sent and 'image' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -72,7 +94,7 @@ def test_handle_submit():
     conn = FakeConnection("GET /submit?firstname=Fitzwilliam&lastname=Darcy" + \
                           " HTTP/1.1\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
 
     assert 'html' in conn.sent and "Fitzwilliam" in conn.sent \
       and 'Darcy' in conn.sent, 'Got: %s' % (repr(conn.sent),)
@@ -82,7 +104,7 @@ def test_handle_submit_no_first_name():
     conn = FakeConnection("GET /submit?firstname=&lastname=Darcy" + \
                           " HTTP/1.1\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
 
     assert 'html' in conn.sent and "Darcy" in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -92,7 +114,7 @@ def test_handle_submit_no_last_name():
     conn = FakeConnection("GET /submit?firstname=Fitzwilliam&lastname=" + \
                           " HTTP/1.1\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
 
     assert 'html' in conn.sent and "Fitzwilliam" in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -101,7 +123,7 @@ def test_handle_submit_no_last_name():
 def test_handle_not_found():
     conn = FakeConnection("GET /bad HTTP/1.0\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     assert 'HTTP/1.0 404' in conn.sent and 'service' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
 
@@ -112,7 +134,7 @@ def test_handle_connection_post():
     conn = FakeConnection("POST / HTTP/1.0\r\n" + \
       "Content-length: 0\r\n\r\n")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     assert 'HTTP/1.0 200' in conn.sent and 'form' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
 
@@ -122,7 +144,7 @@ def test_handle_submit_post():
                           "Content-Length: 31\r\n\r\n" + \
                           "firstname=Fitzwilliam&lastname=Darcy")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     
     assert 'HTTP/1.0 200' in conn.sent and "Hello Mrs." in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -136,7 +158,7 @@ def test_handle_submit_post_multipart_and_form_data():
           'Content-Disposition: form-data; name="lastname"\r\n\r\nDarcy' + \
           '\r\n------WebKitFormBoundaryAaal27xQakxMcNYm--")')
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     
     assert 'HTTP/1.0 200' in conn.sent and "Hello Mrs." in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -147,7 +169,7 @@ def test_handle_not_found_post():
                           "Content-Length: 31\r\n\r\n" + \
                           "firstname=Fitzwilliam&lastname=Darcy")
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     assert 'HTTP/1.0 404' in conn.sent and 'temporarily' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
 
@@ -158,7 +180,7 @@ def test_handle_long_request():
                           "Content-Length: 4020\r\n\r\n" + \
                           "firstname=%s&lastname=%s" % (firstname, lastname))
 
-    server.handle_connection(conn)
+    server.handle_connection(conn, 80)
     
     assert 'HTTP/1.0 200' in conn.sent and "Hello Mrs." in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
@@ -167,7 +189,20 @@ def test_handle_long_request():
 def test_handle_empty_request():
   conn = FakeConnection("\r\n\r\n")
 
-  server.handle_connection(conn)
+  server.handle_connection(conn, 80)
 
   assert 'HTTP/1.0 404' in conn.sent and 'try again' in conn.sent, \
     'Got: %s' % (repr(conn.sent),)
+	
+def test_main():
+    fakemodule = FakeSocketModule()
+
+    success = False
+    try:
+        server.main(fakemodule)
+    except AcceptCalledMultipleTimes:
+        success = True
+        pass
+
+    assert success, "Something went wrong"
+

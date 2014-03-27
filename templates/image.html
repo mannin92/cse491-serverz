@@ -5,4 +5,8 @@
 <h1>Image Page</h1>
 This is some image.
 
+{% for name in names %}
+		<a href='/pics/{{ name }}'>{{ name }}<br>
+{% endfor %}
+	<a href="/">Home</a>
 {% endblock %}
